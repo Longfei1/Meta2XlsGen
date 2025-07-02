@@ -7,7 +7,7 @@ import (
 	"Meta2XlsGen/src/utils"
 	"bytes"
 	"fmt"
-	"github.com/tealeg/xlsx"
+	"github.com/xuri/excelize/v2"
 	"log"
 	"os"
 	"path"
@@ -34,7 +34,7 @@ func (l *GenCodeLogic) Run() error {
 	}
 
 	//生成代码文件
-	err = l.genCode("ConvertConfig.tpl", tplArgs, fmt.Sprintf("%sConvMsg.txt", l.args.Name), true)
+	err = l.genCode("ConvertConfig.tpl", tplArgs, fmt.Sprintf("%sConvMsg.txt", "Tmp"), true)
 	if err != nil {
 		return err
 	}
@@ -95,17 +95,32 @@ func (l *GenCodeLogic) genCode(tplName string, tplArgs *TemplateArgs, outName st
 	if err != nil {
 		return err
 	}
-	log.Printf("gen xml file:%v\n", fileName)
+	log.Printf("gen tmp file:%v, please read it\n", fileName)
 	return nil
 }
 
-func (l *GenCodeLogic) genXls(tplArgs *TemplateArgs) (*xlsx.File, error) {
-	file := xlsx.NewFile()
+type content struct {
+	title    string
+	comment  string
+	firstRow interface{}
+}
 
-	font := xlsx.Font{
-		Name: "Microsoft YaHei UI", // 字体名称
-		Size: 11,                   // 字号
-		Bold: true,                 // 是否加粗
+func (l *GenCodeLogic) genXls(tplArgs *TemplateArgs) (*excelize.File, error) {
+	file := excelize.NewFile()
+
+	//样式
+	fontTitle := &excelize.Font{Family: "Microsoft YaHei UI", Size: 11, Bold: true}
+	alignmentTitle := &excelize.Alignment{Horizontal: "center", Vertical: "center"}
+	styleTitle, err := file.NewStyle(&excelize.Style{Font: fontTitle, Alignment: alignmentTitle})
+	if err != nil {
+		return nil, err
+	}
+
+	fontBody := &excelize.Font{Family: "Microsoft YaHei UI", Size: 10}
+	alignmentBody := &excelize.Alignment{Horizontal: "center", Vertical: "center", WrapText: true}
+	styleBody, err := file.NewStyle(&excelize.Style{Font: fontBody, Alignment: alignmentBody})
+	if err != nil {
+		return nil, err
 	}
 
 	for _, s := range tplArgs.XmlFile.Defines {
@@ -113,56 +128,78 @@ func (l *GenCodeLogic) genXls(tplArgs *TemplateArgs) (*xlsx.File, error) {
 			continue
 		}
 
-		sheet, err := file.AddSheet(s.Desc)
+		sheetName := s.Desc
+		_, err := file.NewSheet(sheetName)
 		if err != nil {
 			return nil, err
 		}
 
-		colsTitle := make([]string, 0)
-		colsDefaultData := make([]interface{}, 0)
+		cols := make([]*content, 0)
 
 		for _, field := range s.Field {
-			err = l.genCell(tplArgs, &colsTitle, &colsDefaultData, field, "")
+			err = l.genCell(tplArgs, &cols, field, "", "")
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		row := sheet.AddRow()
-		for i, col := range colsTitle {
-			cell := row.AddCell()
-			cell.SetString(col)
-
-			//样式
-			cell.GetStyle().Font = font
-			cell.GetStyle().Alignment.Horizontal = "center"
-			cell.GetStyle().ApplyAlignment = true
-			width := float64(len(col)) * 1.1
-			if utf8.RuneCountInString(col) < len(col) { //带中文
-				width -= float64(len(col)-utf8.RuneCountInString(col)) * 0.65
+		for i, val := range cols {
+			col, err := excelize.ColumnNumberToName(i + 1)
+			if err != nil {
+				return nil, err
 			}
-			sheet.Col(i).Width = utils.Max(width, 5.5)
 
-		}
+			cell := fmt.Sprintf("%s%d", col, 1)
+			if err = file.SetCellValue(sheetName, cell, val.title); err != nil {
+				return nil, err
+			}
 
-		row = sheet.AddRow()
-		for _, col := range colsDefaultData {
-			cell := row.AddCell()
-			cell.SetValue(col)
+			//列宽度
+			width := float64(len(val.title)) * 1.5
+			if utf8.RuneCountInString(val.title) < len(val.title) { //带中文
+				width -= float64(len(val.title)-utf8.RuneCountInString(val.title)) * 0.8
+			}
+			if err = file.SetColWidth(sheetName, col, col, utils.Max(width, 10)); err != nil {
+				return nil, err
+			}
 
-			//样式
-			cell.GetStyle().Font.Name = "Microsoft YaHei UI"
-			cell.GetStyle().Font.Size = 10
-			cell.GetStyle().Alignment.Horizontal = "center"
-			cell.GetStyle().Alignment.WrapText = true
-			cell.GetStyle().ApplyAlignment = true
+			//列样式
+			if err = file.SetColStyle(sheetName, col, styleBody); err != nil {
+				return nil, err
+			}
+
+			//标题样式
+			if err = file.SetCellStyle(sheetName, cell, cell, styleTitle); err != nil {
+				return nil, err
+			}
+
+			//批注
+			if len(val.comment) > 0 {
+				if err = file.AddComment(sheetName, excelize.Comment{
+					Author: "Meta2XlsGen",
+					Cell:   cell,
+					Text:   val.comment,
+				}); err != nil {
+					return nil, err
+				}
+			}
+
+			cell2 := fmt.Sprintf("%s%d", col, 2)
+			if err = file.SetCellValue(sheetName, cell2, val.firstRow); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return file, nil
 }
 
-func (l *GenCodeLogic) genCell(tplArgs *TemplateArgs, cols *[]string, defaultData *[]interface{}, field *typedef.FieldInfo, prefix string) error {
+func (l *GenCodeLogic) genCell(tplArgs *TemplateArgs, cols *[]*content, field *typedef.FieldInfo, prefix, prefixComent string) error {
+	comment := prefixComent
+	if len(comment) > 0 || len(field.Desc) > 0 {
+		comment = fmt.Sprintf("%v\n%v", prefixComent, field.Desc)
+	}
+
 	if field.Type == typedef.FTStruct {
 		var s *typedef.StructInfo
 		for _, v := range tplArgs.XmlFile.Defines {
@@ -179,7 +216,8 @@ func (l *GenCodeLogic) genCell(tplArgs *TemplateArgs, cols *[]string, defaultDat
 		if field.Count > 0 {
 			for i := 1; i <= field.Count; i++ {
 				for _, f := range s.Field {
-					err := l.genCell(tplArgs, cols, defaultData, f, fmt.Sprintf("%s%s%d", prefix, field.CName, i))
+					err := l.genCell(tplArgs, cols, f,
+						fmt.Sprintf("%s%s%d", prefix, field.CName, i), comment)
 					if err != nil {
 						return err
 					}
@@ -187,7 +225,7 @@ func (l *GenCodeLogic) genCell(tplArgs *TemplateArgs, cols *[]string, defaultDat
 			}
 		} else {
 			for _, f := range s.Field {
-				err := l.genCell(tplArgs, cols, defaultData, f, prefix+field.CName)
+				err := l.genCell(tplArgs, cols, f, prefix+field.CName, comment)
 				if err != nil {
 					return err
 				}
@@ -197,8 +235,12 @@ func (l *GenCodeLogic) genCell(tplArgs *TemplateArgs, cols *[]string, defaultDat
 		if field.Count > 0 {
 			return fmt.Errorf("not support array execpt struct, field:%v", field.Name)
 		}
-		*cols = append(*cols, prefix+field.CName)
-		*defaultData = append(*defaultData, field.DefaultValue())
+		data := &content{
+			title:    prefix + field.CName,
+			comment:  comment,
+			firstRow: field.DefaultValue(),
+		}
+		*cols = append(*cols, data)
 	}
 
 	return nil

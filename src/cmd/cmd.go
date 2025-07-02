@@ -16,12 +16,14 @@ var SupportEncoding []string = []string{
 }
 
 type CmdArgs struct {
-	Version   string
-	Name      string
-	OutPath   string
-	Encoding  string
-	LabelTag  map[string]string
-	ExcelFile string
+	Version    string
+	Name       string
+	Author     string
+	OutPath    string
+	ExportPath string
+	Encoding   string
+	LabelTag   map[string]string
+	ExcelFile  string
 
 	FilePath string
 
@@ -67,14 +69,17 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 		RunE: func(c *cobra.Command, args []string) error {
 			var err error
 			cmdArgs.Name, _ = c.Flags().GetString("name")
+			cmdArgs.Author, _ = c.Flags().GetString("author")
 
 			cmdArgs.OutPath, _ = c.Flags().GetString("out-path")
 			if err = os.MkdirAll(cmdArgs.OutPath, 644); err != nil {
 				return fmt.Errorf("invalid out-path err:%v", err.Error())
 			}
 
+			cmdArgs.ExportPath = path.Join(cmdArgs.OutPath, cmdArgs.Name)
+
 			cmdArgs.ExcelFile, _ = c.Flags().GetString("excelFile")
-			if path.Ext(cmdArgs.ExcelFile) != ".xls" {
+			if path.Ext(cmdArgs.ExcelFile) != ".xlsx" {
 				return fmt.Errorf("invalid excelFile path:%v", cmdArgs.ExcelFile)
 			}
 
@@ -101,6 +106,7 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 	}
 
 	cmd.Flags().String("name", "Tmp", "指定生成的配置名称，用于文件名、结构名等")
+	cmd.Flags().String("author", "Meta2XlsGen", "生成作者")
 	cmd.Flags().String("out-path", "./", "指定生成的路径")
 	cmd.Flags().String("excelFile", "测试目录/测试配置.xls", "xls文件路径")
 	cmd.Flags().String("encoding", "GBK", "文件编码(UTF-8,GBK)")

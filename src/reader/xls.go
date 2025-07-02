@@ -1,15 +1,15 @@
 package reader
 
 import (
-	"github.com/tealeg/xlsx"
+	"github.com/xuri/excelize/v2"
 	"os"
 	"path/filepath"
 )
 
-func WriteXls(path string, file *xlsx.File) error {
+func WriteXls(path string, file *excelize.File) error {
 	if err := os.MkdirAll(filepath.Dir(path), 644); err != nil {
 		return err
 	}
 
-	return file.Save(path)
+	return file.SaveAs(path)
 }
