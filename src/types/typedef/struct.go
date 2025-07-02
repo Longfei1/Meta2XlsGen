@@ -1,6 +1,36 @@
 package typedef
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+	"fmt"
+)
+
+type LabelTag struct {
+	name string
+	s    string
+}
+
+func NewLabelTag(name string) *LabelTag {
+	return &LabelTag{
+		name: name,
+	}
+}
+
+func (l *LabelTag) Add(key string, val string) {
+	if len(l.s) == 0 {
+		l.s = fmt.Sprintf("%v:%v", key, val)
+	} else {
+		l.s = fmt.Sprintf("%v,%v:%v", l.s, key, val)
+	}
+}
+
+func (l *LabelTag) IsEmpty() bool {
+	return len(l.s) == 0
+}
+
+func (l *LabelTag) Value() string {
+	return fmt.Sprintf("%v:`%v`", l.name, l.s)
+}
 
 type StructInfo struct {
 	Name      string
@@ -8,6 +38,8 @@ type StructInfo struct {
 	Attr      []xml.Attr
 	Field     []*FieldInfo
 	TagOption *TagOption
+
+	LabelTags []*LabelTag
 }
 
 func (s *StructInfo) AllFields() []*FieldInfo {
@@ -37,4 +69,14 @@ func (s *StructInfo) FieldByType(tp ...FieldType) []*FieldInfo {
 		}
 	}
 	return ret
+}
+
+func (s *StructInfo) FieldByName(name string) *FieldInfo {
+	for _, v := range s.AllFields() {
+		if v.Name == name {
+			return v
+		}
+	}
+
+	return nil
 }

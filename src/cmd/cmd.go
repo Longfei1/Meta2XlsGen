@@ -16,14 +16,17 @@ var SupportEncoding []string = []string{
 }
 
 type CmdArgs struct {
-	Version    string
-	Name       string
-	Author     string
-	OutPath    string
-	ExportPath string
-	Encoding   string
-	LabelTag   map[string]string
-	ExcelFile  string
+	Version   string
+	Name      string
+	Author    string
+	XmlPath   string
+	Encoding  string
+	LabelTag  map[string]string
+	TmpPath   string
+	ExcelPath string
+	ExcelFile string
+
+	XmlModulePath string
 
 	FilePath string
 
@@ -71,12 +74,25 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 			cmdArgs.Name, _ = c.Flags().GetString("name")
 			cmdArgs.Author, _ = c.Flags().GetString("author")
 
-			cmdArgs.OutPath, _ = c.Flags().GetString("out-path")
-			if err = os.MkdirAll(cmdArgs.OutPath, 644); err != nil {
-				return fmt.Errorf("invalid out-path err:%v", err.Error())
+			cmdArgs.XmlPath, _ = c.Flags().GetString("xmlPath")
+			if err = os.MkdirAll(cmdArgs.XmlPath, 644); err != nil {
+				return fmt.Errorf("invalid XmlPath err:%v", err.Error())
 			}
 
-			cmdArgs.ExportPath = path.Join(cmdArgs.OutPath, cmdArgs.Name)
+			cmdArgs.TmpPath, _ = c.Flags().GetString("tmpPath")
+			if err = os.MkdirAll(cmdArgs.TmpPath, 644); err != nil {
+				return fmt.Errorf("invalid TmpPath err:%v", err.Error())
+			}
+
+			cmdArgs.XmlModulePath = path.Join(cmdArgs.XmlPath, cmdArgs.Name)
+			if err = os.MkdirAll(cmdArgs.XmlModulePath, 644); err != nil {
+				return fmt.Errorf("invalid XmlModulePath err:%v", err.Error())
+			}
+
+			cmdArgs.ExcelPath, _ = c.Flags().GetString("excelPath")
+			if err = os.MkdirAll(cmdArgs.ExcelPath, 644); err != nil {
+				return fmt.Errorf("invalid ExcelPath err:%v", err.Error())
+			}
 
 			cmdArgs.ExcelFile, _ = c.Flags().GetString("excelFile")
 			if path.Ext(cmdArgs.ExcelFile) != ".xlsx" {
@@ -107,11 +123,13 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 
 	cmd.Flags().String("name", "Tmp", "指定生成的配置名称，用于文件名、结构名等")
 	cmd.Flags().String("author", "Meta2XlsGen", "生成作者")
-	cmd.Flags().String("out-path", "./", "指定生成的路径")
+	cmd.Flags().String("xmlPath", "./xls", "xml文件生成目录")
+	cmd.Flags().String("tmpPath", "./", "tmp描述文件目录")
+	cmd.Flags().String("excelPath", "./xls", "xls文件生成目录")
 	cmd.Flags().String("excelFile", "测试目录/测试配置.xls", "xls文件路径")
 	cmd.Flags().String("encoding", "GBK", "文件编码(UTF-8,GBK)")
 	cmd.Flags().StringArray("label-tag", []string{}, "xml标签与tag的映射关系，用于省去xml文件中tag注释，label:`tag`")
-
+	cmd.Flags().StringArray("ignoreAttr", []string{"__version"}, "全局忽略的属性名称")
 	if err := cmd.Execute(); err != nil {
 		return nil, err
 	}

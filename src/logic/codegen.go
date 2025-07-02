@@ -44,7 +44,7 @@ func (l *GenCodeLogic) Run() error {
 		return err
 	}
 
-	pth := path.Join(l.args.OutPath, l.args.ExcelFile)
+	pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
 	err = reader.WriteXls(pth, xlsFile)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (l *GenCodeLogic) Run() error {
 }
 
 func (l *GenCodeLogic) genCode(tplName string, tplArgs *TemplateArgs, outName string, overwrite bool) error {
-	fileName := path.Join(l.args.OutPath, outName)
+	fileName := path.Join(l.args.TmpPath, outName)
 	if !overwrite {
 		_, err := os.Stat(fileName)
 		if err == nil { //文件存在
@@ -201,13 +201,7 @@ func (l *GenCodeLogic) genCell(tplArgs *TemplateArgs, cols *[]*content, field *t
 	}
 
 	if field.Type == typedef.FTStruct {
-		var s *typedef.StructInfo
-		for _, v := range tplArgs.XmlFile.Defines {
-			if v.Name == field.TypeName {
-				s = v
-				break
-			}
-		}
+		s := tplArgs.XmlFile.FindDefineByName(field.TypeName)
 
 		if s == nil {
 			return fmt.Errorf("not found type %v", field.TypeName)

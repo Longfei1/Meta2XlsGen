@@ -8,7 +8,11 @@ import (
 type TagKey string
 
 const (
-	TKExport TagKey = "export"
+	TKExport     TagKey = "export"
+	TKIgnore     TagKey = "ignore"
+	TKId         TagKey = "id"
+	TKCustomType TagKey = "customType"
+	TKSingleLine TagKey = "singleLine"
 )
 
 type TagInfo struct {
@@ -17,7 +21,11 @@ type TagInfo struct {
 }
 
 type TagOption struct {
-	Export bool
+	Export         bool
+	IsId           bool
+	IsIgnore       bool
+	CustomTypeName string
+	IsSingleLine   bool
 }
 
 func NewTagOption(tagStr string) *TagOption {
@@ -48,6 +56,14 @@ func (t *TagOption) Parse(tagStr string) {
 		switch TagKey(tagInfoStrs[0]) {
 		case TKExport:
 			t.Export, _ = strconv.ParseBool(valueStr)
+		case TKId:
+			t.IsId, _ = strconv.ParseBool(valueStr)
+		case TKIgnore:
+			t.IsIgnore, _ = strconv.ParseBool(valueStr)
+		case TKCustomType:
+			t.CustomTypeName = valueStr
+		case TKSingleLine:
+			t.IsSingleLine, _ = strconv.ParseBool(valueStr)
 		}
 	}
 }
@@ -59,5 +75,17 @@ func (t *TagOption) Merge(src *TagOption) {
 
 	if !src.Export {
 		t.Export = src.Export
+	}
+
+	if !src.IsId {
+		t.IsId = src.IsId
+	}
+
+	if src.IsIgnore {
+		t.IsIgnore = src.IsIgnore
+	}
+
+	if len(src.CustomTypeName) > 0 {
+		t.CustomTypeName = src.CustomTypeName
 	}
 }

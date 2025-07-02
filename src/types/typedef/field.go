@@ -17,10 +17,16 @@ type FieldInfo struct {
 	Refer     string
 	CName     string
 	Desc      string
+	IsReferBy bool
+
+	TagOption *TagOption
 }
 
 func (f *FieldInfo) DefaultValue() interface{} {
 	if f.Type == FTInt {
+		if f.IsReferBy {
+			return 1
+		}
 		return 0
 	}
 	return ""

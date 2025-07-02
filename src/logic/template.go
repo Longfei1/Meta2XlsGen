@@ -27,6 +27,19 @@ type FileInfo struct {
 	Defines  []*typedef.StructInfo //结构变量，用于描述配置的属性结构
 }
 
+func (f *FileInfo) FindMacroByName(name string) int {
+	return f.Macro[name]
+}
+
+func (f *FileInfo) FindDefineByName(name string) *typedef.StructInfo {
+	for _, v := range f.Defines {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
 func NewTemplateArgs(c *cmd.CmdArgs) *TemplateArgs {
 	return &TemplateArgs{
 		CmdArgs:    c,
@@ -64,6 +77,9 @@ func (t *TemplateArgs) genArgs() error {
 func (t *TemplateArgs) GetFuncMap() template.FuncMap {
 	return map[string]any{
 		"toUpper": strings.ToUpper,
+		"add": func(a, b int) int {
+			return a + b
+		},
 	}
 }
 
@@ -113,6 +129,11 @@ func (t *TemplateArgs) parseMetaXml(e *reader.Element) (*FileInfo, error) {
 		}
 
 	}
+
+	for _, v := range xmlFile.Defines {
+		t.genLabelTags(xmlFile, v)
+	}
+
 	return xmlFile, nil
 }
 
@@ -146,6 +167,7 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 	}
 
 	//属性成员
+	haveId := false
 	for _, v := range e.Children {
 		if v.XMLName.Local != "entry" {
 			continue
@@ -156,10 +178,89 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 			return nil, err
 		}
 
+		if f.TagOption.IsId {
+			if haveId {
+				return nil, fmt.Errorf("repeat tag id of sturct:%v", s.Name)
+			}
+			haveId = true
+		}
+
+		if len(f.Refer) > 0 {
+			if referField := s.FieldByName(f.Refer); referField != nil {
+				referField.IsReferBy = true
+			} else {
+				return nil, fmt.Errorf("field:%v of struct:%v refer:%v not found", f.Name, s.Name, f.Refer)
+			}
+		}
+
 		s.Field = append(s.Field, f)
 	}
 
 	return s, nil
+}
+
+func (t *TemplateArgs) getTypeName(name string) string {
+	s := utils.ToCamelCase(name)
+	return fmt.Sprintf("%s%s", t.CmdArgs.Name, strings.ReplaceAll(s, t.CmdArgs.Name, ""))
+}
+
+func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
+	tagMain := typedef.NewLabelTag(s.Name)
+	//结构体
+
+	if len(s.TagOption.CustomTypeName) > 0 {
+		tagMain.Add(string(typedef.TKCustomType), s.TagOption.CustomTypeName)
+	} else {
+		ignoreAttr := make([]string, 0)
+		for _, f := range s.Field {
+			if f.Type == typedef.FTStruct {
+				continue
+			}
+			if f.TagOption.IsId {
+				tagMain.Add(string(typedef.TKId), f.Name)
+			} else if f.TagOption.IsIgnore {
+				ignoreAttr = append(ignoreAttr, f.Name)
+			}
+		}
+		if len(ignoreAttr) > 0 {
+			tagMain.Add(string(typedef.TKIgnore), strings.Join(ignoreAttr, ";"))
+		}
+
+		if !s.TagOption.IsSingleLine {
+			tagMain.Add("isArray", "true")
+		}
+	}
+
+	if !tagMain.IsEmpty() {
+		s.LabelTags = append(s.LabelTags, tagMain)
+	}
+
+	//子结构
+	for _, f := range s.Field {
+		if f.Type != typedef.FTStruct {
+			continue
+		}
+
+		cs := xmlFile.FindDefineByName(f.TypeName)
+		if cs == nil {
+			continue
+		}
+
+		tag := typedef.NewLabelTag(fmt.Sprintf("%v.%v", s.Name, f.Name))
+		if len(cs.TagOption.CustomTypeName) > 0 {
+			tag.Add(string(typedef.TKCustomType), cs.TagOption.CustomTypeName)
+		} else {
+			tag.Add("globalType", f.TypeName)
+		}
+
+		if len(f.CountName) > 0 { //数组
+			tag.Add("isArray", "true")
+		}
+
+		if !tag.IsEmpty() {
+			s.LabelTags = append(s.LabelTags, tag)
+		}
+	}
 }
 
 func (t *TemplateArgs) parseEntry(e *reader.Element) (*typedef.FieldInfo, error) {
@@ -177,6 +278,7 @@ func (t *TemplateArgs) parseEntry(e *reader.Element) (*typedef.FieldInfo, error)
 		Refer:     utils.GetXmlAttr(e.Attrs, "refer"),
 		CName:     utils.GetXmlAttr(e.Attrs, "cname"),
 		Desc:      utils.GetXmlAttr(e.Attrs, "desc"),
+		TagOption: e.TagOption,
 	}
 
 	switch tp {
