@@ -1,0 +1,114 @@
+package cmd
+
+import (
+	"errors"
+	"fmt"
+	"github.com/spf13/cobra"
+	"os"
+	"path"
+	"regexp"
+	"slices"
+)
+
+var SupportEncoding []string = []string{
+	"UTF-8",
+	"GBK",
+}
+
+type CmdArgs struct {
+	Version   string
+	Name      string
+	OutPath   string
+	Encoding  string
+	LabelTag  map[string]string
+	ExcelFile string
+
+	FilePath string
+
+	SuccessRun bool
+}
+
+func (c *CmdArgs) parseCustomTypeLabel(strs []string) error {
+	c.LabelTag = make(map[string]string)
+	for _, labels := range strs {
+		re := regexp.MustCompile("(?:^|,)\\s*([^:]+?):`([^`]*)`")
+		matches := re.FindAllStringSubmatch(labels, -1)
+		for _, m := range matches {
+			if len(m) == 3 {
+				c.LabelTag[m[1]] = m[2]
+			}
+		}
+	}
+	return nil
+}
+
+const AppVersion = "v1.0.0"
+
+func ParseCmdArgs() (*CmdArgs, error) {
+	cmdArgs := &CmdArgs{
+		Version: AppVersion,
+	}
+	cmd := &cobra.Command{
+		Use: `tool for xml to code
+[]string类型的参数，支持多次输入，或者用,分隔，例:
+  --ignore-label label1 --ignore-label label2 --ignore-label label3
+  --ignore-label label1,label2 --ignore-label label3
+`,
+		Short: "meta配置转化工具",
+		Long: `meta.xml文件，生成对应的xls文件
+
+xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Key2:Value2"-->
+目前支持的tag有：
+	export: 是否导出，默认为true
+`,
+		Version: AppVersion,
+		Example: `Meta2XlsGen --name TestAct file1 file2`,
+		Args:    cobra.ArbitraryArgs,
+		RunE: func(c *cobra.Command, args []string) error {
+			var err error
+			cmdArgs.Name, _ = c.Flags().GetString("name")
+
+			cmdArgs.OutPath, _ = c.Flags().GetString("out-path")
+			if err = os.MkdirAll(cmdArgs.OutPath, 644); err != nil {
+				return fmt.Errorf("invalid out-path err:%v", err.Error())
+			}
+
+			cmdArgs.ExcelFile, _ = c.Flags().GetString("excelFile")
+			if path.Ext(cmdArgs.ExcelFile) != ".xls" {
+				return fmt.Errorf("invalid excelFile path:%v", cmdArgs.ExcelFile)
+			}
+
+			cmdArgs.Encoding, _ = c.Flags().GetString("encoding")
+			if !slices.Contains(SupportEncoding, cmdArgs.Encoding) {
+				return fmt.Errorf("invalid encoding %v", cmdArgs.Encoding)
+			}
+
+			LabelTag, _ := c.Flags().GetStringArray("label-tag")
+			err = cmdArgs.parseCustomTypeLabel(LabelTag)
+			if err != nil {
+				return fmt.Errorf("parseCustomTypeLabel err:%v", err.Error())
+			}
+
+			if len(args) != 1 {
+				return errors.New("文件路径数量不正确！")
+			}
+
+			cmdArgs.FilePath = args[0]
+
+			cmdArgs.SuccessRun = true
+			return nil
+		},
+	}
+
+	cmd.Flags().String("name", "Tmp", "指定生成的配置名称，用于文件名、结构名等")
+	cmd.Flags().String("out-path", "./", "指定生成的路径")
+	cmd.Flags().String("excelFile", "测试目录/测试配置.xls", "xls文件路径")
+	cmd.Flags().String("encoding", "GBK", "文件编码(UTF-8,GBK)")
+	cmd.Flags().StringArray("label-tag", []string{}, "xml标签与tag的映射关系，用于省去xml文件中tag注释，label:`tag`")
+
+	if err := cmd.Execute(); err != nil {
+		return nil, err
+	}
+
+	return cmdArgs, nil
+}

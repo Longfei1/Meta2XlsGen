@@ -1,0 +1,1 @@
+go build -o Meta2XlsGen.exe ./src/main.go

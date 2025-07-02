@@ -1,0 +1,63 @@
+package typedef
+
+import (
+	"strconv"
+	"strings"
+)
+
+type TagKey string
+
+const (
+	TKExport TagKey = "export"
+)
+
+type TagInfo struct {
+	Key   TagKey
+	Value string
+}
+
+type TagOption struct {
+	Export bool
+}
+
+func NewTagOption(tagStr string) *TagOption {
+	//默认值
+	op := &TagOption{
+		Export: true,
+	}
+
+	if len(tagStr) > 0 {
+		op.Parse(tagStr)
+	}
+	return op
+}
+
+func (t *TagOption) Parse(tagStr string) {
+	tagStrs := strings.Split(tagStr, ",")
+	for _, s := range tagStrs {
+		if s == "" {
+			continue
+		}
+
+		tagInfoStrs := strings.Split(s, ":")
+		if len(tagInfoStrs) != 2 {
+			continue
+		}
+
+		valueStr := tagInfoStrs[1]
+		switch TagKey(tagInfoStrs[0]) {
+		case TKExport:
+			t.Export, _ = strconv.ParseBool(valueStr)
+		}
+	}
+}
+
+func (t *TagOption) Merge(src *TagOption) {
+	if src == nil {
+		return
+	}
+
+	if !src.Export {
+		t.Export = src.Export
+	}
+}
