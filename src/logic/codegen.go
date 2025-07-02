@@ -183,12 +183,30 @@ func (l *GenCodeLogic) genXls(tplArgs *TemplateArgs) (*excelize.File, error) {
 					return nil, err
 				}
 			}
+		}
 
-			cell2 := fmt.Sprintf("%s%d", col, 2)
-			if err = file.SetCellValue(sheetName, cell2, val.firstRow); err != nil {
-				return nil, err
+		//数据
+		count := 1
+		if !s.TagOption.IsSingleLine {
+			count = 3
+		}
+		for row := 0; row < count; row++ {
+			for i, val := range cols {
+				col, err := excelize.ColumnNumberToName(i + 1)
+				if err != nil {
+					return nil, err
+				}
+				cell := fmt.Sprintf("%s%d", col, row+2)
+				if err = file.SetCellValue(sheetName, cell, val.firstRow); err != nil {
+					return nil, err
+				}
 			}
 		}
+	}
+
+	err = file.DeleteSheet("Sheet1")
+	if err != nil {
+		return nil, err
 	}
 
 	return file, nil
