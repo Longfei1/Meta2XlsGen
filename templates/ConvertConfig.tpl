@@ -18,13 +18,12 @@
 2.使用ResConvert.exe，将xls配置转化为xml
 
 3.执行Xml2CodeGen，生成配置解析代码（参数按需调整，主要预生成文件列表）
-./Xml2CodeGen --name {{.CmdArgs.Name}} --author "{{.CmdArgs.Author}}"
+./Xml2CodeGen.exe --name {{.CmdArgs.Name}} --author "{{.CmdArgs.Author}}" --out-path D:\Projects\petcombat-server-proj\src\configlib\src\activity
 {{- range .XmlFile.Defines -}}
     {{- range .LabelTags -}}
 {{- print " "}}--label-tag {{.Value}}
     {{- end}}
 {{- end -}}
-{{- print " "}}--out-path D:\Projects\petcombat-server-proj\src\configlib\src\activity
 {{- range .XmlFile.Defines -}}
     {{- if .TagOption.Export -}}
 {{- print " "}}{{$CmdArgs.XmlModulePath}}/{{.Name}}Conf.xml

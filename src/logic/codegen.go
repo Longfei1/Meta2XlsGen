@@ -7,6 +7,7 @@ import (
 	"Meta2XlsGen/src/utils"
 	"bytes"
 	"fmt"
+	"github.com/tealeg/xlsx"
 	"github.com/xuri/excelize/v2"
 	"log"
 	"os"
@@ -39,17 +40,43 @@ func (l *GenCodeLogic) Run() error {
 		return err
 	}
 
-	xlsFile, err := l.genXls(tplArgs)
-	if err != nil {
-		return err
-	}
+	if l.args.ConvertMode {
+		xlsxFile, err := l.genXlsx(tplArgs)
+		if err != nil {
+			return err
+		}
 
-	pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
-	err = reader.WriteXls(pth, xlsFile)
-	if err != nil {
-		return err
+		pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
+		tmpPath := utils.RepleacePathExt(pth, "Tmp.xlsx")
+		err = reader.WriteXlsx(tmpPath, xlsxFile)
+		if err != nil {
+			return err
+		}
+		log.Printf("gen xlsx file:%v\n", tmpPath)
+
+		log.Println("begin convert")
+		err = reader.ExcelXlsx2Xls(tmpPath, pth)
+		if err != nil {
+			return err
+		}
+
+		err = os.Remove(tmpPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		xlsFile, err := l.genXls(tplArgs)
+		if err != nil {
+			return err
+		}
+
+		pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
+		err = reader.WriteXls(pth, xlsFile)
+		if err != nil {
+			return err
+		}
+		log.Printf("gen xls file:%v\n", pth)
 	}
-	log.Printf("gen xls file:%v\n", pth)
 
 	return nil
 }
@@ -105,7 +132,74 @@ type content struct {
 	firstRow interface{}
 }
 
-func (l *GenCodeLogic) genXls(tplArgs *TemplateArgs) (*excelize.File, error) {
+func (l *GenCodeLogic) genXls(tplArgs *TemplateArgs) (*xlsx.File, error) {
+	file := xlsx.NewFile()
+
+	font := xlsx.Font{
+		Name: "Microsoft YaHei UI", // 字体名称
+		Size: 11,                   // 字号
+		Bold: true,                 // 是否加粗
+	}
+
+	for _, s := range tplArgs.XmlFile.Defines {
+		if !s.TagOption.Export {
+			continue
+		}
+
+		sheet, err := file.AddSheet(s.Desc)
+		if err != nil {
+			return nil, err
+		}
+
+		cols := make([]*content, 0)
+		for _, field := range s.Field {
+			err = l.genCell(tplArgs, &cols, field, "", "")
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		row := sheet.AddRow()
+		for i, val := range cols {
+			cell := row.AddCell()
+			cell.SetString(val.title)
+
+			//样式
+			cell.GetStyle().Font = font
+			cell.GetStyle().Alignment.Horizontal = "center"
+			cell.GetStyle().ApplyAlignment = true
+			width := float64(len(val.title)) * 1.1
+			if utf8.RuneCountInString(val.title) < len(val.title) { //带中文
+				width -= float64(len(val.title)-utf8.RuneCountInString(val.title)) * 0.65
+			}
+			sheet.Col(i).Width = utils.Max(width, 5.5)
+		}
+
+		//数据
+		count := 1
+		if !s.TagOption.IsSingleLine {
+			count = 3
+		}
+		for rowCount := 0; rowCount < count; rowCount++ {
+			row = sheet.AddRow()
+			for _, val := range cols {
+				cell := row.AddCell()
+				cell.SetValue(val.firstRow)
+
+				//样式
+				cell.GetStyle().Font.Name = "Microsoft YaHei UI"
+				cell.GetStyle().Font.Size = 10
+				cell.GetStyle().Alignment.Horizontal = "center"
+				cell.GetStyle().Alignment.WrapText = true
+				cell.GetStyle().ApplyAlignment = true
+			}
+		}
+	}
+
+	return file, nil
+}
+
+func (l *GenCodeLogic) genXlsx(tplArgs *TemplateArgs) (*excelize.File, error) {
 	file := excelize.NewFile()
 
 	//样式

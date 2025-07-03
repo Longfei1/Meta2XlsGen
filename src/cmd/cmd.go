@@ -26,6 +26,8 @@ type CmdArgs struct {
 	ExcelPath string
 	ExcelFile string
 
+	ConvertMode bool
+
 	XmlModulePath string
 
 	FilePath string
@@ -36,8 +38,11 @@ type CmdArgs struct {
 func (c *CmdArgs) parseCustomTypeLabel(strs []string) error {
 	c.LabelTag = make(map[string]string)
 	for _, labels := range strs {
-		re := regexp.MustCompile("(?:^|,)\\s*([^:]+?):`([^`]*)`")
+		re := regexp.MustCompile(`^([\w.]+):<([^>]+)>$`)
 		matches := re.FindAllStringSubmatch(labels, -1)
+		if matches == nil {
+			return fmt.Errorf("lable tag %v format error", labels)
+		}
 		for _, m := range matches {
 			if len(m) == 3 {
 				c.LabelTag[m[1]] = m[2]
@@ -95,7 +100,7 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 			}
 
 			cmdArgs.ExcelFile, _ = c.Flags().GetString("excelFile")
-			if path.Ext(cmdArgs.ExcelFile) != ".xlsx" {
+			if path.Ext(cmdArgs.ExcelFile) != ".xls" {
 				return fmt.Errorf("invalid excelFile path:%v", cmdArgs.ExcelFile)
 			}
 
@@ -103,6 +108,8 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 			if !slices.Contains(SupportEncoding, cmdArgs.Encoding) {
 				return fmt.Errorf("invalid encoding %v", cmdArgs.Encoding)
 			}
+
+			cmdArgs.ConvertMode, _ = c.Flags().GetBool("convertMode")
 
 			LabelTag, _ := c.Flags().GetStringArray("label-tag")
 			err = cmdArgs.parseCustomTypeLabel(LabelTag)
@@ -128,8 +135,8 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 	cmd.Flags().String("excelPath", "./xls", "xls文件生成目录")
 	cmd.Flags().String("excelFile", "测试目录/测试配置.xls", "xls文件路径")
 	cmd.Flags().String("encoding", "GBK", "文件编码(UTF-8,GBK)")
+	cmd.Flags().Bool("convertMode", true, "true:先生成xlsx文件，然后调用wps或excel软件转化为xls false:直接创建xls（不支持批注）")
 	cmd.Flags().StringArray("label-tag", []string{}, "xml标签与tag的映射关系，用于省去xml文件中tag注释，label:`tag`")
-	cmd.Flags().StringArray("ignoreAttr", []string{"__version"}, "全局忽略的属性名称")
 	if err := cmd.Execute(); err != nil {
 		return nil, err
 	}

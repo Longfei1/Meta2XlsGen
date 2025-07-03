@@ -29,7 +29,7 @@ func (l *LabelTag) IsEmpty() bool {
 }
 
 func (l *LabelTag) Value() string {
-	return fmt.Sprintf("%v:`%v`", l.name, l.s)
+	return fmt.Sprintf("%v:<%v>", l.name, l.s)
 }
 
 type StructInfo struct {

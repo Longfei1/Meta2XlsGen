@@ -223,7 +223,7 @@ func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 			}
 		}
 		if len(ignoreAttr) > 0 {
-			tagMain.Add(string(typedef.TKIgnore), strings.Join(ignoreAttr, ";"))
+			tagMain.Add(string(typedef.TKIgnore), strings.Join(ignoreAttr, "_"))
 		}
 
 		if !s.TagOption.IsSingleLine {
