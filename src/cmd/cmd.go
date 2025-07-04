@@ -29,6 +29,7 @@ type CmdArgs struct {
 	ConvertMode bool
 
 	XmlModulePath string
+	CodePath      string
 
 	FilePath string
 
@@ -59,7 +60,7 @@ func ParseCmdArgs() (*CmdArgs, error) {
 		Version: AppVersion,
 	}
 	cmd := &cobra.Command{
-		Use: `tool for xml to code
+		Use: `tool for meta to xls
 []string类型的参数，支持多次输入，或者用,分隔，例:
   --ignore-label label1 --ignore-label label2 --ignore-label label3
   --ignore-label label1,label2 --ignore-label label3
@@ -70,6 +71,10 @@ func ParseCmdArgs() (*CmdArgs, error) {
 xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Key2:Value2"-->
 目前支持的tag有：
 	export: 是否导出，默认为true
+	ignore: 默认为false,用于标记该entry是否需要再代码中生成（值字段生效）
+	id: 默认为false,用于标记该entry是id字段（值字段生效）
+	customType: 自定义类型的名称
+	singleLine: 默认为false,用于标记该struct在xls中是否为单行数据，决定C++代码中是否为数组
 `,
 		Version: AppVersion,
 		Example: `Meta2XlsGen --name TestAct file1 file2`,
@@ -88,6 +93,8 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 			if err = os.MkdirAll(cmdArgs.TmpPath, 644); err != nil {
 				return fmt.Errorf("invalid TmpPath err:%v", err.Error())
 			}
+
+			cmdArgs.CodePath, _ = c.Flags().GetString("codePath")
 
 			cmdArgs.XmlModulePath = path.Join(cmdArgs.XmlPath, cmdArgs.Name)
 			if err = os.MkdirAll(cmdArgs.XmlModulePath, 644); err != nil {
@@ -132,6 +139,7 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 	cmd.Flags().String("author", "Meta2XlsGen", "生成作者")
 	cmd.Flags().String("xmlPath", "./xls", "xml文件生成目录")
 	cmd.Flags().String("tmpPath", "./", "tmp描述文件目录")
+	cmd.Flags().String("codePath", "./", "代码文件生成目录，对应Xml2CodeGen out-path")
 	cmd.Flags().String("excelPath", "./xls", "xls文件生成目录")
 	cmd.Flags().String("excelFile", "测试目录/测试配置.xls", "xls文件路径")
 	cmd.Flags().String("encoding", "GBK", "文件编码(UTF-8,GBK)")
