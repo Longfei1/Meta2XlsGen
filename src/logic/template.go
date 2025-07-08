@@ -159,15 +159,17 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 	}
 
 	s := &typedef.StructInfo{
-		Name:      name,
-		Desc:      utils.GetXmlAttr(e.Attrs, "desc"),
-		Attr:      e.Attrs,
-		Field:     make([]*typedef.FieldInfo, 0),
+		Name:       name,
+		Desc:       utils.GetXmlAttr(e.Attrs, "desc"),
+		Attr:       e.Attrs,
+		Field:      make([]*typedef.FieldInfo, 0),
+		IdNames:    make([]string, 0),
+		IgnoreAttr: make([]string, 0),
+
 		TagOption: e.TagOption,
 	}
 
 	//属性成员
-	haveId := false
 	for _, v := range e.Children {
 		if v.XMLName.Local != "entry" {
 			continue
@@ -179,10 +181,11 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 		}
 
 		if f.TagOption.IsId {
-			if haveId {
-				return nil, fmt.Errorf("repeat tag id of sturct:%v", s.Name)
-			}
-			haveId = true
+			s.IdNames = append(s.IdNames, f.Name)
+		}
+
+		if f.TagOption.IsIgnore {
+			s.IgnoreAttr = append(s.IgnoreAttr, f.Name)
 		}
 
 		if len(f.Refer) > 0 {
@@ -206,24 +209,19 @@ func (t *TemplateArgs) getTypeName(name string) string {
 
 func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 	tagMain := typedef.NewLabelTag(s.Name)
-	//结构体
 
+	//结构体
 	if len(s.TagOption.CustomTypeName) > 0 {
 		tagMain.Add(string(typedef.TKCustomType), s.TagOption.CustomTypeName)
-	} else {
-		ignoreAttr := make([]string, 0)
-		for _, f := range s.Field {
-			if f.Type == typedef.FTStruct {
-				continue
-			}
-			if f.TagOption.IsId {
-				tagMain.Add(string(typedef.TKId), f.Name)
-			} else if f.TagOption.IsIgnore {
-				ignoreAttr = append(ignoreAttr, f.Name)
-			}
+		if len(s.IdNames) > 0 {
+			tagMain.Add(string(typedef.TKId), strings.Join(s.IdNames, "_"))
 		}
-		if len(ignoreAttr) > 0 {
-			tagMain.Add(string(typedef.TKIgnore), strings.Join(ignoreAttr, "_"))
+	} else {
+		if len(s.IdNames) > 0 {
+			tagMain.Add(string(typedef.TKId), strings.Join(s.IdNames, "_"))
+		}
+		if len(s.IgnoreAttr) > 0 {
+			tagMain.Add(string(typedef.TKIgnore), strings.Join(s.IgnoreAttr, "_"))
 		}
 
 		if !s.TagOption.IsSingleLine {
