@@ -39,8 +39,9 @@ type StructInfo struct {
 	Field     []*FieldInfo
 	TagOption *TagOption
 
-	IdNames    []string
-	IgnoreAttr []string
+	IdNames     []string
+	IgnoreAttr  []string
+	FieldRemark []string
 
 	LabelTags []*LabelTag
 }
