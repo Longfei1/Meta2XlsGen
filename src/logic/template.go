@@ -221,6 +221,12 @@ func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 		if len(s.IdNames) > 0 {
 			tagMain.Add(string(typedef.TKId), strings.Join(s.IdNames, "_"))
 		}
+		if !s.TagOption.IsSingleLine {
+			tagMain.Add("isArray", "true")
+		}
+		if len(s.FieldGetter) > 0 {
+			tagMain.Add(string(typedef.TKFieldGetter), strings.Join(s.FieldGetter, "_"))
+		}
 	} else {
 		if len(s.IdNames) > 0 {
 			tagMain.Add(string(typedef.TKId), strings.Join(s.IdNames, "_"))
