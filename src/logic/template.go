@@ -196,6 +196,10 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 			}
 		}
 
+		if len(f.TagOption.GetterName) > 0 {
+			s.FieldGetter = append(s.FieldRemark, fmt.Sprintf("%v_%v", f.Name, f.TagOption.GetterName))
+		}
+
 		s.FieldRemark = append(s.FieldRemark, fmt.Sprintf("%v_%v", f.Name, f.CName))
 		s.Field = append(s.Field, f)
 	}
@@ -223,6 +227,10 @@ func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 		}
 		if len(s.IgnoreAttr) > 0 {
 			tagMain.Add(string(typedef.TKIgnore), strings.Join(s.IgnoreAttr, "_"))
+		}
+
+		if len(s.FieldGetter) > 0 {
+			tagMain.Add(string(typedef.TKFieldGetter), strings.Join(s.FieldGetter, "_"))
 		}
 
 		if len(s.FieldRemark) > 0 {

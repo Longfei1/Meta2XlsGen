@@ -42,6 +42,7 @@ type StructInfo struct {
 	IdNames     []string
 	IgnoreAttr  []string
 	FieldRemark []string
+	FieldGetter []string
 
 	LabelTags []*LabelTag
 }
