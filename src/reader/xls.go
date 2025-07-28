@@ -75,7 +75,7 @@ func ExcelXlsx2Xls(xlsxPath string, xlsPath string) error {
 
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("捕获到panic:", r, debug.Stack()) // 输出panic传递的值
+			fmt.Println("捕获到panic:", r, string(debug.Stack())) // 输出panic传递的值
 		}
 	}()
 
