@@ -29,21 +29,21 @@ func WriteXls(path string, file *xlsx.File) error {
 
 // 创建Office应用实例（优先WPS，其次Excel）
 func createOfficeApplication() (*ole.IDispatch, error) {
-	// 尝试创建WPS应用
-	unknown, err := oleutil.CreateObject("wps.Application")
-	if err == nil {
-		fmt.Println("已连接到WPS")
-		wps, _ := unknown.QueryInterface(ole.IID_IDispatch)
-		return wps, nil
-	}
-
 	// 尝试创建ET（WPS表格）应用
-	unknown, err = oleutil.CreateObject("et.Application")
+	unknown, err := oleutil.CreateObject("Ket.Application")
 	if err == nil {
 		fmt.Println("已连接到WPS表格")
 		et, _ := unknown.QueryInterface(ole.IID_IDispatch)
 		return et, nil
 	}
+
+	// 尝试创建WPS应用
+	//unknown, err = oleutil.CreateObject("Kwps.Application")
+	//if err == nil {
+	//	fmt.Println("已连接到WPS")
+	//	wps, _ := unknown.QueryInterface(ole.IID_IDispatch)
+	//	return wps, nil
+	//}
 
 	// 尝试创建Excel应用
 	unknown, err = oleutil.CreateObject("Excel.Application")

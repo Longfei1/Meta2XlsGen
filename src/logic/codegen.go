@@ -40,42 +40,44 @@ func (l *GenCodeLogic) Run() error {
 		return err
 	}
 
-	if l.args.ConvertMode {
-		xlsxFile, err := l.genXlsx(tplArgs)
-		if err != nil {
-			return err
-		}
+	if !l.args.OnlyConvMsg {
+		if !l.args.NativeMode {
+			xlsxFile, err := l.genXlsx(tplArgs)
+			if err != nil {
+				return err
+			}
 
-		pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
-		tmpPath := utils.RepleacePathExt(pth, "Tmp.xlsx")
-		err = reader.WriteXlsx(tmpPath, xlsxFile)
-		if err != nil {
-			return err
-		}
-		log.Printf("gen xlsx file:%v\n", tmpPath)
+			pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
+			tmpPath := utils.RepleacePathExt(pth, "Tmp.xlsx")
+			err = reader.WriteXlsx(tmpPath, xlsxFile)
+			if err != nil {
+				return err
+			}
+			log.Printf("gen xlsx file:%v\n", tmpPath)
 
-		log.Println("begin convert")
-		err = reader.ExcelXlsx2Xls(tmpPath, pth)
-		if err != nil {
-			return err
-		}
+			log.Println("begin convert")
+			err = reader.ExcelXlsx2Xls(tmpPath, pth)
+			if err != nil {
+				return err
+			}
 
-		err = os.Remove(tmpPath)
-		if err != nil {
-			return err
-		}
-	} else {
-		xlsFile, err := l.genXls(tplArgs)
-		if err != nil {
-			return err
-		}
+			err = os.Remove(tmpPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			xlsFile, err := l.genXls(tplArgs)
+			if err != nil {
+				return err
+			}
 
-		pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
-		err = reader.WriteXls(pth, xlsFile)
-		if err != nil {
-			return err
+			pth := path.Join(l.args.ExcelPath, l.args.ExcelFile)
+			err = reader.WriteXls(pth, xlsFile)
+			if err != nil {
+				return err
+			}
+			log.Printf("gen xls file:%v\n", pth)
 		}
-		log.Printf("gen xls file:%v\n", pth)
 	}
 
 	return nil

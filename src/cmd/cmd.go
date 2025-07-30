@@ -26,7 +26,8 @@ type CmdArgs struct {
 	ExcelPath string
 	ExcelFile string
 
-	ConvertMode bool
+	NativeMode  bool
+	OnlyConvMsg bool
 
 	XmlModulePath string
 	CodePath      string
@@ -116,7 +117,8 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 				return fmt.Errorf("invalid encoding %v", cmdArgs.Encoding)
 			}
 
-			cmdArgs.ConvertMode, _ = c.Flags().GetBool("convertMode")
+			cmdArgs.NativeMode, _ = c.Flags().GetBool("nativeMode")
+			cmdArgs.OnlyConvMsg, _ = c.Flags().GetBool("onlyConvMsg")
 
 			LabelTag, _ := c.Flags().GetStringArray("label-tag")
 			err = cmdArgs.parseCustomTypeLabel(LabelTag)
@@ -143,7 +145,8 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 	cmd.Flags().String("excelPath", "./xls", "xls文件生成目录")
 	cmd.Flags().String("excelFile", "测试目录/测试配置.xls", "xls文件路径")
 	cmd.Flags().String("encoding", "GBK", "文件编码(UTF-8,GBK)")
-	cmd.Flags().Bool("convertMode", true, "true:先生成xlsx文件，然后调用wps或excel软件转化为xls false:直接创建xls（不支持批注）")
+	cmd.Flags().Bool("nativeMode", false, "是否原生模式，false:先生成xlsx文件，然后调用wps或excel软件转化为xls true:直接创建xls（不支持批注）")
+	cmd.Flags().Bool("onlyConvMsg", false, "是否只生成转化信息，TmpConvMsg.txt")
 	cmd.Flags().StringArray("label-tag", []string{}, "xml标签与tag的映射关系，用于省去xml文件中tag注释，label:`tag`")
 	if err := cmd.Execute(); err != nil {
 		return nil, err
