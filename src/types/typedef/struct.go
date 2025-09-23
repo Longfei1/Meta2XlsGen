@@ -7,29 +7,37 @@ import (
 
 type LabelTag struct {
 	name string
-	s    string
+	k    []string
+	kv   map[string]string
 }
 
 func NewLabelTag(name string) *LabelTag {
 	return &LabelTag{
 		name: name,
+		k:    make([]string, 0),
+		kv:   make(map[string]string),
 	}
 }
 
 func (l *LabelTag) Add(key string, val string) {
-	if len(l.s) == 0 {
-		l.s = fmt.Sprintf("%v:%v", key, val)
-	} else {
-		l.s = fmt.Sprintf("%v,%v:%v", l.s, key, val)
-	}
+	l.k = append(l.k, key)
+	l.kv[key] = val
 }
 
 func (l *LabelTag) IsEmpty() bool {
-	return len(l.s) == 0
+	return len(l.k) == 0 || len(l.kv) == 0
 }
 
 func (l *LabelTag) Value() string {
-	return fmt.Sprintf("%v:<%v>", l.name, l.s)
+	var s string
+	for i, k := range l.k {
+		if i == 0 {
+			s = fmt.Sprintf("%v:%v", k, l.kv[k])
+		} else {
+			s = fmt.Sprintf("%v,%v:%v", s, k, l.kv[k])
+		}
+	}
+	return fmt.Sprintf("%v:<%v>", l.name, s)
 }
 
 type StructInfo struct {
@@ -43,6 +51,7 @@ type StructInfo struct {
 	IgnoreAttr  []string
 	FieldRemark []string
 	FieldGetter []string
+	SplitType   []string
 
 	LabelTags []*LabelTag
 }

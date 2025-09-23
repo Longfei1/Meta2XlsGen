@@ -200,6 +200,10 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 			s.FieldGetter = append(s.FieldRemark, fmt.Sprintf("%v_%v", f.Name, f.TagOption.GetterName))
 		}
 
+		if len(f.TagOption.SplitType) > 0 {
+			s.SplitType = append(s.SplitType, fmt.Sprintf("%v_%v", f.Name, f.TagOption.SplitType))
+		}
+
 		s.FieldRemark = append(s.FieldRemark, fmt.Sprintf("%v_%v", f.Name, f.CName))
 		s.Field = append(s.Field, f)
 	}
@@ -228,20 +232,7 @@ func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 			tagMain.Add(string(typedef.TKFieldGetter), strings.Join(s.FieldGetter, "_"))
 		}
 	} else {
-		if len(s.IdNames) > 0 {
-			tagMain.Add(string(typedef.TKId), strings.Join(s.IdNames, "_"))
-		}
-		if len(s.IgnoreAttr) > 0 {
-			tagMain.Add(string(typedef.TKIgnore), strings.Join(s.IgnoreAttr, "_"))
-		}
-
-		if len(s.FieldGetter) > 0 {
-			tagMain.Add(string(typedef.TKFieldGetter), strings.Join(s.FieldGetter, "_"))
-		}
-
-		if len(s.FieldRemark) > 0 {
-			tagMain.Add("fieldRemark", strings.Join(s.FieldRemark, "_"))
-		}
+		t.formatCommonStructLabelTag(s, tagMain)
 
 		if !s.TagOption.IsSingleLine {
 			tagMain.Add("isArray", "true")
@@ -253,6 +244,31 @@ func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 	}
 
 	//子结构
+	t.genChildStructLabelTags(xmlFile, s, s.Name)
+}
+
+func (t *TemplateArgs) formatCommonStructLabelTag(s *typedef.StructInfo, tag *typedef.LabelTag) {
+	if len(s.IdNames) > 0 {
+		tag.Add(string(typedef.TKId), strings.Join(s.IdNames, "_"))
+	}
+	if len(s.IgnoreAttr) > 0 {
+		tag.Add(string(typedef.TKIgnore), strings.Join(s.IgnoreAttr, "_"))
+	}
+
+	if len(s.FieldGetter) > 0 {
+		tag.Add(string(typedef.TKFieldGetter), strings.Join(s.FieldGetter, "_"))
+	}
+
+	if len(s.FieldRemark) > 0 {
+		tag.Add("fieldRemark", strings.Join(s.FieldRemark, "_"))
+	}
+
+	if len(s.SplitType) > 0 {
+		tag.Add("fieldSplitType", strings.Join(s.SplitType, "_"))
+	}
+}
+
+func (t *TemplateArgs) genChildStructLabelTags(xmlFile *FileInfo, s *typedef.StructInfo, namePrefix string) {
 	for _, f := range s.Field {
 		if f.Type != typedef.FTStruct {
 			continue
@@ -263,7 +279,8 @@ func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 			continue
 		}
 
-		tag := typedef.NewLabelTag(fmt.Sprintf("%v.%v", s.Name, f.Name))
+		name := fmt.Sprintf("%v.%v", namePrefix, f.Name)
+		tag := typedef.NewLabelTag(name)
 		if len(cs.TagOption.CustomTypeName) > 0 {
 			tag.Add(string(typedef.TKCustomType), cs.TagOption.CustomTypeName)
 		} else {
@@ -274,9 +291,14 @@ func (t *TemplateArgs) genLabelTags(xmlFile *FileInfo, s *typedef.StructInfo) {
 			tag.Add("isArray", "true")
 		}
 
+		t.formatCommonStructLabelTag(cs, tag) //并入子结构的labeltag
+
 		if !tag.IsEmpty() {
 			s.LabelTags = append(s.LabelTags, tag)
 		}
+
+		//递归嵌套子结构
+		t.genChildStructLabelTags(xmlFile, cs, name)
 	}
 }
 

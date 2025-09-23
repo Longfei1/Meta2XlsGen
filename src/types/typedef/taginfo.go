@@ -14,6 +14,7 @@ const (
 	TKCustomType  TagKey = "customType"
 	TKSingleLine  TagKey = "singleLine"
 	TKFieldGetter TagKey = "fieldGetter"
+	TKSplitType   TagKey = "splitType"
 )
 
 type TagInfo struct {
@@ -28,6 +29,7 @@ type TagOption struct {
 	CustomTypeName string
 	IsSingleLine   bool
 	GetterName     string
+	SplitType      string
 }
 
 func NewTagOption(tagStr string) *TagOption {
@@ -68,6 +70,8 @@ func (t *TagOption) Parse(tagStr string) {
 			t.IsSingleLine, _ = strconv.ParseBool(valueStr)
 		case TKFieldGetter:
 			t.GetterName = valueStr
+		case TKSplitType:
+			t.SplitType = valueStr
 		}
 	}
 }
@@ -95,5 +99,9 @@ func (t *TagOption) Merge(src *TagOption) {
 
 	if len(src.GetterName) > 0 {
 		t.GetterName = src.GetterName
+	}
+
+	if len(src.SplitType) > 0 {
+		t.SplitType = src.SplitType
 	}
 }
