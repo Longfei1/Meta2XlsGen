@@ -200,7 +200,7 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 			s.FieldGetter = append(s.FieldRemark, fmt.Sprintf("%v_%v", f.Name, f.TagOption.GetterName))
 		}
 
-		if len(f.TagOption.SplitType) > 0 {
+		if f.Type == typedef.FTString && len(f.TagOption.SplitType) > 0 {
 			s.SplitType = append(s.SplitType, fmt.Sprintf("%v_%v", f.Name, f.TagOption.SplitType))
 		}
 

@@ -76,6 +76,8 @@ xml文件支持在标签上方添加注解tag，语法为<!--tag:"Key1:Value2,Ke
 	id: 默认为false,用于标记该entry是id字段（值字段生效）
 	customType: 自定义类型的名称
 	singleLine: 默认为false,用于标记该struct在xls中是否为单行数据，决定C++代码中是否为数组
+	fieldGetter: 设置该entry的Getter函数名称
+	splitType: number，表示为","分隔字符串类型，分隔后为number数组，仅支持string类型的entry
 `,
 		Version: AppVersion,
 		Example: `Meta2XlsGen --name TestAct file1 file2`,
