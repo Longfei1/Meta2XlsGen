@@ -179,13 +179,15 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 		if err != nil {
 			return nil, err
 		}
-
+		
 		if f.TagOption.IsId {
 			s.IdNames = append(s.IdNames, f.Name)
 		}
 
 		if f.TagOption.IsIgnore {
 			s.IgnoreAttr = append(s.IgnoreAttr, f.Name)
+		} else {
+			s.FieldRemark = append(s.FieldRemark, fmt.Sprintf("%v_%v", f.Name, f.CName))
 		}
 
 		if len(f.Refer) > 0 {
@@ -204,7 +206,6 @@ func (t *TemplateArgs) parseStruct(e *reader.Element) (*typedef.StructInfo, erro
 			s.SplitType = append(s.SplitType, fmt.Sprintf("%v_%v", f.Name, f.TagOption.SplitType))
 		}
 
-		s.FieldRemark = append(s.FieldRemark, fmt.Sprintf("%v_%v", f.Name, f.CName))
 		s.Field = append(s.Field, f)
 	}
 
@@ -251,20 +252,23 @@ func (t *TemplateArgs) formatCommonStructLabelTag(s *typedef.StructInfo, tag *ty
 	if len(s.IdNames) > 0 {
 		tag.Add(string(typedef.TKId), strings.Join(s.IdNames, "_"))
 	}
-	if len(s.IgnoreAttr) > 0 {
-		tag.Add(string(typedef.TKIgnore), strings.Join(s.IgnoreAttr, "_"))
-	}
 
 	if len(s.FieldGetter) > 0 {
 		tag.Add(string(typedef.TKFieldGetter), strings.Join(s.FieldGetter, "_"))
 	}
 
-	if len(s.FieldRemark) > 0 {
-		tag.Add("fieldRemark", strings.Join(s.FieldRemark, "_"))
-	}
+	if len(s.TagOption.CustomTypeName) == 0 {
+		if len(s.IgnoreAttr) > 0 {
+			tag.Add(string(typedef.TKIgnore), strings.Join(s.IgnoreAttr, "_"))
+		}
 
-	if len(s.SplitType) > 0 {
-		tag.Add("fieldSplitType", strings.Join(s.SplitType, "_"))
+		if len(s.FieldRemark) > 0 {
+			tag.Add("fieldRemark", strings.Join(s.FieldRemark, "_"))
+		}
+
+		if len(s.SplitType) > 0 {
+			tag.Add("fieldSplitType", strings.Join(s.SplitType, "_"))
+		}
 	}
 }
 
